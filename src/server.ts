@@ -1,8 +1,7 @@
-import express from 'express';
+import express, { Request, Response }  from 'express';
 import bodyParser from 'body-parser';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
-import { filterImageFromURL, deleteLocalFiles } from "./util/util";
-const isImageURL = require("image-url-validator").default;
+const validUrl = require('valid-url');
 
 (async () => {
 
@@ -17,19 +16,25 @@ const isImageURL = require("image-url-validator").default;
 
   // IMPLEMENT A RESTFUL ENDPOINT
   // GET /filteredimage?image_url={{URL}}
-  app.get("/filteredimage", async (req, res) => {
+  app.get("/filteredimage", async (req: Request, res: Response) => {
+    
 		// Get image url query ?image_url={}
-		let { image_url } = req.query;
+		let image_url: string = req.query.image_url as string;
 
 		// validate the image url
-		let isUrlValid = await isImageURL(image_url);
-		if (!isUrlValid) {
+    let isMatchExt = image_url.match(/\.(jpeg|jpg|gif|png)$/) != null;
+		if (!(validUrl.isUri(image_url) && isMatchExt)) {
 			return res.status(400).send("The image_url is invalid!");
 		}
 
 		// Filter the image
-		let fImage = await filterImageFromURL(image_url);
-
+    let fImage:string;
+    try {
+      fImage = await filterImageFromURL(image_url);
+    } catch(e){
+			return res.status(400).send("Can not filter image_url!");
+    }
+		
 		// Response the filtered image
 		res.sendFile(fImage, (err) => {
 			// delete local temporary file
